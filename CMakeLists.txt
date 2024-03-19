@@ -99,4 +99,8 @@ foreach(URDF_FILES ${URDF_FILES})
     )
 endforeach()
 
+foreach(dir meshes )
+    install(DIRECTORY ${dir} DESTINATION share/${PROJECT_NAME})
+endforeach(dir)
+
 ament_package()
