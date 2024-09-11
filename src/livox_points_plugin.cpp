@@ -213,6 +213,8 @@ namespace gazebo
         sensor_msgs::msg::PointCloud2 cloud2;
         sensor_msgs::convertPointCloudToPointCloud2(cloud, cloud2);
         cloud2.header = cloud.header;
+        // Get wall time (ROS2 time) and publish the PointCloud2 message
+        cloud2.header.stamp = rclcpp::Clock().now();
         cloud2_pub->publish(cloud2);
     }
 }
