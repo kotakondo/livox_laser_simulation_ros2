@@ -2,8 +2,8 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
   <xacro:property name="M_PI" value="3.1415926"/> 
-  <xacro:property name="laser_min_range" value="0.1"/>
-  <xacro:property name="laser_max_range" value="20.0"/>
+  <xacro:property name="laser_min_range" value="0.2"/>
+  <xacro:property name="laser_max_range" value="10.0"/>
   <xacro:property name="samples" value="40000"/>
   <xacro:property name="resolution" value="0.002"/>
   <xacro:property name="noise_mean" value="0.0"/>
@@ -26,11 +26,12 @@
 
   <link name="${name}">
   <xacro:box_inertia m="${length}" w="${width}" d="${length}" h="${height}"/>
-    <visual>
+    <!-- Removed the visual element for the box -->
+    <!-- <visual>
           <geometry>
               <box size="${length} ${width} ${height}"/>
           </geometry>
-    </visual>
+    </visual> -->
   </link>
 
     <joint name="${name}_joint" type="fixed">
@@ -42,9 +43,9 @@
     <gazebo reference="${name}">
       <sensor type="ray" name="${name}">
         <pose>0 0 0 0 0 0</pose>
-        <visualize>true</visualize>
-        <update_rate>10</update_rate>
-        <!-- This ray plgin is only for visualization. -->
+        <visualize>true</visualize>  <!-- Ensure no sensor visualization -->
+        <update_rate>30</update_rate>
+        <!-- This ray plugin is for sensor data -->
         <plugin name="${name}_plugin" filename="libros2_livox.so">
         <ray>
           <scan>
@@ -84,4 +85,3 @@
   </xacro:macro>
 
 </robot>
-
