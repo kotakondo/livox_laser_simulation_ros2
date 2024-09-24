@@ -160,11 +160,11 @@ namespace gazebo
             // Handle out-of-range data
             if (range >= RangeMax())
             {
-                range = 0;
+                range = RangeMax();
             }
             else if (range <= RangeMin())
             {
-                range = 0;
+                range = RangeMin();
             }
 
             // Calculate point cloud data
