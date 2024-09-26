@@ -43,7 +43,8 @@
     <gazebo reference="${name}">
       <sensor type="ray" name="${name}">
         <pose>0 0 0 0 0 0</pose>
-        <visualize>true</visualize>  <!-- Ensure no sensor visualization -->
+        <always_on>true</always_on>
+        <visualize>false</visualize>  <!-- Ensure no sensor visualization -->
         <update_rate>30</update_rate>
         <!-- This ray plugin is for sensor data -->
         <plugin name="${name}_plugin" filename="libros2_livox.so">
