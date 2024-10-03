@@ -22,7 +22,7 @@
     </inertial>
   </xacro:macro>
 
-  <xacro:macro name="mid360" params="name:='' namespace:='NX01' parent:= 'base_link' topic:='mid360' *origin ">
+  <xacro:macro name="mid360" params="name:='' namespace:='quadrotor' parent:= 'base_link' topic:='mid360' *origin ">
 
   <link name="${name}">
   <xacro:box_inertia m="${length}" w="${width}" d="${length}" h="${height}"/>
@@ -48,37 +48,38 @@
         <update_rate>30</update_rate>
         <!-- This ray plugin is for sensor data -->
         <plugin name="${name}_plugin" filename="libros2_livox.so">
-        <ray>
-          <scan>
-          <horizontal>
-          <samples>100</samples>
-          <resolution>1</resolution>
-          <min_angle>${0}</min_angle>
-          <max_angle>${2*M_PI}</max_angle>
-          </horizontal>
-          <vertical>
-          <samples>360</samples>
-          <resolution>1</resolution>
-          <min_angle>${-7.22/180*M_PI}</min_angle>
-          <max_angle>${55.22/180*M_PI}</max_angle>
-          </vertical>
-          </scan>
-          <range>
-          <min>${laser_min_range}</min>
-          <max>${laser_max_range}</max>
-          <resolution>${resolution}</resolution>
-          </range>
-          <noise>
-          <type>gaussian</type>
-          <mean>${noise_mean}</mean>
-          <stddev>${noise_stddev}</stddev>
-          </noise>
-        </ray>
+          <ray>
+            <scan>
+            <horizontal>
+            <samples>100</samples>
+            <resolution>1</resolution>
+            <min_angle>${0}</min_angle>
+            <max_angle>${2*M_PI}</max_angle>
+            </horizontal>
+            <vertical>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>${-7.22/180*M_PI}</min_angle>
+            <max_angle>${55.22/180*M_PI}</max_angle>
+            </vertical>
+            </scan>
+            <range>
+            <min>${laser_min_range}</min>
+            <max>${laser_max_range}</max>
+            <resolution>${resolution}</resolution>
+            </range>
+            <noise>
+            <type>gaussian</type>
+            <mean>${noise_mean}</mean>
+            <stddev>${noise_stddev}</stddev>
+            </noise>
+          </ray>
           <visualize>false</visualize>
-		  <samples>${samples}</samples>
-		  <downsample>1</downsample>
-		  <csv_file_name>$(find ros2_livox_simulation)/scan_mode/mid360.csv</csv_file_name>
-		  <topic>${namespace}/${topic}</topic>
+		      <samples>${samples}</samples>
+		      <downsample>1</downsample>
+		      <csv_file_name>$(find ros2_livox_simulation)/scan_mode/mid360.csv</csv_file_name>
+		      <topic>${topic}</topic>
+          <namespace>${namespace}</namespace>
         </plugin>
       </sensor>
       <gravity>0</gravity>
