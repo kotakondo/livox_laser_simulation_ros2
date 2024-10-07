@@ -4,7 +4,7 @@
   <xacro:property name="M_PI" value="3.1415926"/> 
   <xacro:property name="laser_min_range" value="0.01"/>
   <xacro:property name="laser_max_range" value="10.0"/>
-  <xacro:property name="samples" value="5000"/>
+  <xacro:property name="samples" value="20000"/>
   <xacro:property name="resolution" value="0.1"/>
   <xacro:property name="noise_mean" value="0.0"/>
   <xacro:property name="noise_stddev" value="0.01"/>
@@ -16,23 +16,24 @@
 
   <xacro:macro name="box_inertia" params="m w h d">
     <inertial>
-      <origin xyz="0 0 0" rpy="${pi/2} 0 ${pi/2}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="${m}"/>
       <inertia ixx="${(m/12) * (h*h + d*d)}" ixy="0.0" ixz="0.0" iyy="${(m/12) * (w*w + d*d)}" iyz="0.0" izz="${(m/12) * (w*w + h*h)}"/>
     </inertial>
   </xacro:macro>
 
-  <xacro:macro name="mid360" params="name:='' namespace:='quadrotor' parent:= 'base_link' topic:='mid360' *origin ">
+  <xacro:macro name="mid360" params=" name:='' 
+                                      namespace:='quadrotor' 
+                                      parent:='base_link' 
+                                      topic:='mid360' 
+                                      *origin 
+                                      accel_fps:=250
+                                      gyro_fps:=500
+                                      ">
 
-  <link name="${name}">
-  <xacro:box_inertia m="${length}" w="${width}" d="${length}" h="${height}"/>
-    <!-- Removed the visual element for the box -->
-    <!-- <visual>
-          <geometry>
-              <box size="${length} ${width} ${height}"/>
-          </geometry>
-    </visual> -->
-  </link>
+    <link name="${name}">
+      <xacro:box_inertia m="${length}" w="${width}" d="${length}" h="${height}"/>
+    </link>
 
     <joint name="${name}_joint" type="fixed">
       <parent link="${parent}"/>
@@ -45,7 +46,7 @@
         <pose>0 0 0 0 0 0</pose>
         <always_on>true</always_on>
         <visualize>false</visualize>  <!-- Ensure no sensor visualization -->
-        <update_rate>30</update_rate>
+        <update_rate>200</update_rate>
         <!-- This ray plugin is for sensor data -->
         <plugin name="${name}_plugin" filename="libros2_livox.so">
           <ray>
@@ -75,15 +76,68 @@
             </noise>
           </ray>
           <visualize>false</visualize>
-		      <samples>${samples}</samples>
-		      <downsample>1</downsample>
-		      <csv_file_name>$(find ros2_livox_simulation)/scan_mode/mid360.csv</csv_file_name>
-		      <topic>${topic}</topic>
+          <samples>${samples}</samples>
+          <downsample>1</downsample>
+          <csv_file_name>$(find ros2_livox_simulation)/scan_mode/mid360.csv</csv_file_name>
+          <topic>${topic}</topic>
           <namespace>${namespace}</namespace>
         </plugin>
       </sensor>
+
+      <!-- IMU -->
+      <sensor name="${name}/imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>${gyro_fps}</update_rate>
+        <topic>${name}/imu/sample</topic>
+        <plugin name="${name}_imu" filename="libimu_plugin.so">
+          <topicName>${name}/imu/sample</topicName>
+          <bodyName>${name}_link</bodyName>
+          <updateRateHZ>${gyro_fps}</updateRateHZ>
+          <gaussianNoise>0.0</gaussianNoise>
+          <xyzOffset>0 0 0</xyzOffset>
+          <rpyOffset>0 0 0</rpyOffset>
+        </plugin>
+      </sensor>
+
+      <!-- Accel -->
+      <!-- <sensor name="${name}accel" type="imu">
+        <always_on>true</always_on>
+        <update_rate>${accel_fps}</update_rate>
+        <topic>${name}/accel/sample</topic>
+        <plugin name="${topics_ns}_accel_plugin" filename="librealsense_gazebo_accel_sensor.so">
+          <topicName>${name}/accel/sample</topicName>
+          <bodyName>${name}_link</bodyName>
+          <updateRateHZ>${accel_fps}</updateRateHZ>
+          <gaussianNoise>0.1</gaussianNoise>
+          <xyzOffset>0 0 0</xyzOffset>
+          <rpyOffset>0 0 0</rpyOffset>
+          <frameName>${parent}</frameName>
+          <initialOrientationAsReference>false</initialOrientationAsReference>
+        </plugin>
+        <pose>0 0 0 0 0 0</pose>
+      </sensor> -->
+
+      <!-- Gyro -->
+      <!-- <sensor name="${name}gyro" type="imu">
+        <always_on>true</always_on>
+        <update_rate>${gyro_fps}</update_rate>
+        <topic>${name}/gyro/sample</topic>
+        <plugin name="${topics_ns}_gyro_plugin" filename="librealsense_gazebo_gyro_sensor.so">
+          <topicName>${name}/gyro/sample</topicName>
+          <bodyName>${name}_link</bodyName>
+          <updateRateHZ>${gyro_fps}</updateRateHZ>
+          <gaussianNoise>0.1</gaussianNoise>
+          <xyzOffset>0 0 0</xyzOffset>
+          <rpyOffset>0 0 0</rpyOffset>
+          <frameName>${parent}</frameName>
+          <initialOrientationAsReference>false</initialOrientationAsReference>
+        </plugin>
+      </sensor> -->
+
       <gravity>0</gravity>
+
     </gazebo>
+
   </xacro:macro>
 
 </robot>
