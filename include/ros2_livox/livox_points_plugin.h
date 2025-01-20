@@ -114,6 +114,7 @@ namespace gazebo
 
       double maxDist = 400.0;
       double minDist = 0.1;
+      double maxRange_ = 30.0;
 
       std::string ns_ = "default_frame";
    };

@@ -126,6 +126,10 @@ namespace gazebo
             end_point = maxDist * axis + offset.Pos();
             rayShape->AddRay(start_point, end_point);
         }
+
+        // Use this for cut off in OnNewLaserScans
+        maxRange_ = maxDist;
+
     }
 
     void LivoxPointsPlugin::OnNewLaserScans()
@@ -163,9 +167,19 @@ namespace gazebo
                 auto intensity = rayShape->GetRetro(pair.first);
 
                 // Handle out-of-range data
-                if (range >= RangeMax())
+                // if (range >= RangeMax())
+                // {
+                //     range = RangeMax();
+                // }
+                // else if (range <= RangeMin())
+                // {
+                //     range = RangeMin();
+                // }
+
+                if (range >= maxRange_)
                 {
-                    range = RangeMax();
+                    // If the range is greater than 50.0, skip the data
+                    continue;
                 }
                 else if (range <= RangeMin())
                 {

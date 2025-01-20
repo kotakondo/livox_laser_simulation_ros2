@@ -3,7 +3,7 @@
 
   <xacro:property name="M_PI" value="3.1415926"/> 
   <xacro:property name="laser_min_range" value="0.001"/>
-  <xacro:property name="laser_max_range" value="10.0"/>
+  <xacro:property name="laser_max_range" value="30.0"/>
   <xacro:property name="samples" value="5000"/>
   <xacro:property name="resolution" value="0.05"/>
   <xacro:property name="noise_mean" value="0.0"/>
@@ -51,23 +51,23 @@
         <plugin name="${name}_plugin" filename="libros2_livox.so">
           <ray>
             <scan>
-            <horizontal>
-            <samples>100</samples>
-            <resolution>1</resolution>
-            <min_angle>${0}</min_angle>
-            <max_angle>${2*M_PI}</max_angle>
-            </horizontal>
+              <horizontal>
+                <samples>100</samples>
+                <resolution>1</resolution>
+                <min_angle>${0}</min_angle>
+                <max_angle>${2*M_PI}</max_angle>
+              </horizontal>
             <vertical>
-            <samples>360</samples>
-            <resolution>1</resolution>
-            <min_angle>${-7.22/180*M_PI}</min_angle>
-            <max_angle>${55.22/180*M_PI}</max_angle>
+              <samples>360</samples>
+              <resolution>1</resolution>
+              <min_angle>${-7.22/180*M_PI}</min_angle>
+              <max_angle>${55.22/180*M_PI}</max_angle>
             </vertical>
             </scan>
             <range>
-            <min>${laser_min_range}</min>
-            <max>${laser_max_range}</max>
-            <resolution>${resolution}</resolution>
+              <min>${laser_min_range}</min>
+              <max>${laser_max_range}</max>
+              <resolution>${resolution}</resolution>
             </range>
             <noise>
             <type>gaussian</type>
