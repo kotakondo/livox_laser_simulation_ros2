@@ -4,8 +4,8 @@
   <xacro:property name="M_PI" value="3.1415926"/> 
   <xacro:property name="laser_min_range" value="0.001"/>
   <xacro:property name="laser_max_range" value="30.0"/>
-  <xacro:property name="samples" value="5000"/>
-  <xacro:property name="resolution" value="0.05"/>
+  <xacro:property name="samples" value="100"/>
+  <xacro:property name="resolution" value="0.1"/>
   <xacro:property name="noise_mean" value="0.0"/>
   <xacro:property name="noise_stddev" value="0.01"/>
 
@@ -46,7 +46,7 @@
         <pose>0 0 0 0 0 0</pose>
         <always_on>true</always_on>
         <visualize>false</visualize>  <!-- Ensure no sensor visualization -->
-        <update_rate>200</update_rate>
+        <update_rate>100</update_rate>
         <!-- This ray plugin is for sensor data -->
         <plugin name="${name}_plugin" filename="libros2_livox.so">
           <ray>

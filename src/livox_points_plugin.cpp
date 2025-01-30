@@ -167,24 +167,24 @@ namespace gazebo
                 auto intensity = rayShape->GetRetro(pair.first);
 
                 // Handle out-of-range data
-                // if (range >= RangeMax())
-                // {
-                //     range = RangeMax();
-                // }
-                // else if (range <= RangeMin())
-                // {
-                //     range = RangeMin();
-                // }
-
-                if (range >= maxRange_)
+                if (range >= RangeMax())
                 {
-                    // If the range is greater than 50.0, skip the data
-                    continue;
+                    range = RangeMax();
                 }
                 else if (range <= RangeMin())
                 {
                     range = RangeMin();
                 }
+
+                // if (range >= maxRange_)
+                // {
+                //     // If the range is greater than 50.0, skip the data
+                //     continue;
+                // }
+                // else if (range <= RangeMin())
+                // {
+                //     range = RangeMin();
+                // }
 
                 // Calculate point cloud data
                 auto rotate_info = pair.second;
