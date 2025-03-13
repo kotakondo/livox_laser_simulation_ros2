@@ -74,12 +74,15 @@ namespace gazebo
         size_t delimiter_pos = parent_name.find("::");
         parent_name = parent_name.substr(delimiter_pos + 2);
 
+        rclcpp::QoS sensor_qos(rclcpp::KeepLast(1));
+        sensor_qos.best_effort().durability_volatile();
+
         node = transport::NodePtr(new transport::Node());
         node->Init(raySensor->WorldName());
         // PointCloud2 publisher
-        cloud2_pub = node_->create_publisher<sensor_msgs::msg::PointCloud2>(curr_scan_topic + "_PointCloud2", 10);
+        cloud2_pub = node_->create_publisher<sensor_msgs::msg::PointCloud2>(curr_scan_topic + "_PointCloud2", sensor_qos);
         // CustomMsg publisher
-        custom_pub = node_->create_publisher<livox_ros_driver2::msg::CustomMsg>(curr_scan_topic, 10);
+        custom_pub = node_->create_publisher<livox_ros_driver2::msg::CustomMsg>(curr_scan_topic, sensor_qos);
 
         scanPub = node->Advertise<msgs::LaserScanStamped>(curr_scan_topic+"laserscan", 50);
 
