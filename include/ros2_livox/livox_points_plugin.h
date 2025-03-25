@@ -112,9 +112,9 @@ namespace gazebo
       int64_t maxPointSize = 1000;
       int64_t downSample = 1;
 
-      double maxDist = 400.0;
+      double maxDist = 10.0;
       double minDist = 0.1;
-      double maxRange_ = 30.0;
+      double maxRange_ = 15.0;
 
       std::string ns_ = "default_frame";
    };
