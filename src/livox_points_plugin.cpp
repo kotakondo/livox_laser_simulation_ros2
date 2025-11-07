@@ -210,11 +210,11 @@ namespace gazebo
                 clouds.back().y = point.Y();
                 clouds.back().z = point.Z();
 
-                // Fill the PointCloud point cloud message
-                clouds.emplace_back();
-                clouds.back().x = point.X();
-                clouds.back().y = point.Y();
-                clouds.back().z = point.Z();
+                // // Fill the PointCloud point cloud message
+                // clouds.emplace_back();
+                // clouds.back().x = point.X();
+                // clouds.back().y = point.Y();
+                // clouds.back().z = point.Z();
 
                 // Calculate timestamp offset
                 boost::chrono::high_resolution_clock::time_point end_time = boost::chrono::high_resolution_clock::now();
