@@ -35,6 +35,10 @@ namespace gazebo
                 avia_infos.back().time = data[0];
                 avia_infos.back().azimuth = data[1] * deg_2_rad;
                 avia_infos.back().zenith = data[2] * deg_2_rad - M_PI_2; //转化成标准的右手系角度
+                // Precompute direction unit vector (avoids trig in hot path)
+                ignition::math::Quaterniond ray;
+                ray.Euler(ignition::math::Vector3d(0.0, avia_infos.back().zenith, avia_infos.back().azimuth));
+                avia_infos.back().direction = ray * ignition::math::Vector3d(1.0, 0.0, 0.0);
             } else {
             RCLCPP_ERROR(rclcpp::get_logger("convertDataToRotateInfo"), "data size is not 3!");
         }
@@ -109,8 +113,32 @@ namespace gazebo
         {
             downSample = 1;
         }
+        if (sdfPtr->HasElement("accumulate_scans"))
+        {
+            accumulateScans = sdfPtr->Get<int>("accumulate_scans");
+        }
+        if (accumulateScans < 1)
+        {
+            accumulateScans = 1;
+        }
+        if (sdfPtr->HasElement("num_phases"))
+        {
+            numPhases = sdfPtr->Get<int>("num_phases");
+        }
+        if (numPhases < 1)
+        {
+            numPhases = 1;
+        }
+        // Initialize phase offsets evenly spaced across the scan pattern
+        phaseOffsets.resize(numPhases);
+        for (int64_t i = 0; i < numPhases; i++)
+        {
+            phaseOffsets[i] = i * maxPointSize / numPhases;
+        }
         RCLCPP_INFO(rclcpp::get_logger("LivoxPointsPlugin"), "sample: %ld", samplesStep);
         RCLCPP_INFO(rclcpp::get_logger("LivoxPointsPlugin"), "downsample: %ld", downSample);
+        RCLCPP_INFO(rclcpp::get_logger("LivoxPointsPlugin"), "accumulate_scans: %ld", accumulateScans);
+        RCLCPP_INFO(rclcpp::get_logger("LivoxPointsPlugin"), "num_phases: %ld", numPhases);
         rayShape->RayShapes().reserve(samplesStep / downSample);
         rayShape->Load(sdfPtr);
         rayShape->Init();
@@ -122,9 +150,7 @@ namespace gazebo
         {
             int index = j % maxPointSize;
             auto &rotate_info = aviaInfos[index];
-            ignition::math::Quaterniond ray;
-            ray.Euler(ignition::math::Vector3d(0.0, rotate_info.zenith, rotate_info.azimuth));
-            auto axis = offset.Rot() * ray * ignition::math::Vector3d(1.0, 0.0, 0.0);
+            auto axis = offset.Rot() * rotate_info.direction;
             start_point = minDist * axis + offset.Pos();
             end_point = maxDist * axis + offset.Pos();
             rayShape->AddRay(start_point, end_point);
@@ -147,20 +173,10 @@ namespace gazebo
             msgs::LaserScan *scan = laserMsg.mutable_scan();
             InitializeScan(scan);
 
-            // Create a custom message pp_livox for publishing Livox CustomMsg type messages
-            livox_ros_driver2::msg::CustomMsg pp_livox;
-            pp_livox.header.stamp = node_->get_clock()->now();
-            pp_livox.header.frame_id = ns_ + "/" + raySensor->Name();
-            int count = 0;
-            boost::chrono::high_resolution_clock::time_point start_time = boost::chrono::high_resolution_clock::now();
+            // Collect current scan's points into the accumulation buffer
+            std::vector<std::pair<ignition::math::Vector3d, float>> currentScanPoints;
+            currentScanPoints.reserve(points_pair.size());
 
-            // For publishing PointCloud2 type messages
-            sensor_msgs::msg::PointCloud cloud;
-            cloud.header.stamp = node_->get_clock()->now();
-            cloud.header.frame_id = ns_ + "/" + raySensor->Name();
-            auto &clouds = cloud.points;
-
-            // Iterate over ray scan point pairs
             for (auto &pair : points_pair)
             {
                 auto range = rayShape->GetRange(pair.first);
@@ -170,47 +186,71 @@ namespace gazebo
                 if (range >= maxDist)
                 {
                     range = maxDist;
-                    // continue;
                 }
                 else if (range <= RangeMin())
                 {
                     range = RangeMin();
                 }
 
-                // Calculate point cloud data
-                auto rotate_info = pair.second;
-                ignition::math::Quaterniond ray;
-                ray.Euler(ignition::math::Vector3d(0.0, rotate_info.zenith, rotate_info.azimuth));
-                auto axis = ray * ignition::math::Vector3d(1.0, 0.0, 0.0);
-                auto point = range * axis;
+                // Calculate point cloud data using precomputed direction
+                auto point = range * pair.second.direction;
+                currentScanPoints.emplace_back(point, static_cast<float>(intensity));
+            }
 
-                // Fill the CustomMsg point cloud message
-                livox_ros_driver2::msg::CustomPoint p;
-                p.x = point.X();
-                p.y = point.Y();
-                p.z = point.Z();
-                p.reflectivity = intensity;
+            // Push current scan and evict oldest if buffer is full
+            pointHistory.push_back(std::move(currentScanPoints));
+            while (static_cast<int64_t>(pointHistory.size()) > accumulateScans)
+            {
+                pointHistory.pop_front();
+            }
 
-                // Fill the PointCloud point cloud message
-                clouds.emplace_back();
-                clouds.back().x = point.X();
-                clouds.back().y = point.Y();
-                clouds.back().z = point.Z();
+            // Build messages from ALL accumulated scans
+            auto now = node_->get_clock()->now();
+            std::string frame_id = ns_ + "/" + raySensor->Name();
 
-                // // Fill the PointCloud point cloud message
-                // clouds.emplace_back();
-                // clouds.back().x = point.X();
-                // clouds.back().y = point.Y();
-                // clouds.back().z = point.Z();
+            livox_ros_driver2::msg::CustomMsg pp_livox;
+            pp_livox.header.stamp = now;
+            pp_livox.header.frame_id = frame_id;
 
-                // Calculate timestamp offset
-                boost::chrono::high_resolution_clock::time_point end_time = boost::chrono::high_resolution_clock::now();
-                boost::chrono::nanoseconds elapsed_time = boost::chrono::duration_cast<boost::chrono::nanoseconds>(end_time - start_time);
-                p.offset_time = elapsed_time.count();
+            sensor_msgs::msg::PointCloud cloud;
+            cloud.header.stamp = now;
+            cloud.header.frame_id = frame_id;
 
-                // Add point cloud data to the CustomMsg message
-                pp_livox.points.push_back(p);
-                count++;
+            // Reserve total capacity across all accumulated scans
+            size_t totalPoints = 0;
+            for (auto &scanPoints : pointHistory)
+            {
+                totalPoints += scanPoints.size();
+            }
+            pp_livox.points.reserve(totalPoints);
+            cloud.points.reserve(totalPoints);
+
+            boost::chrono::high_resolution_clock::time_point start_time = boost::chrono::high_resolution_clock::now();
+            int count = 0;
+
+            for (auto &scanPoints : pointHistory)
+            {
+                for (auto &[point, intensity] : scanPoints)
+                {
+                    livox_ros_driver2::msg::CustomPoint p;
+                    p.x = point.X();
+                    p.y = point.Y();
+                    p.z = point.Z();
+                    p.reflectivity = intensity;
+
+                    boost::chrono::high_resolution_clock::time_point end_time = boost::chrono::high_resolution_clock::now();
+                    boost::chrono::nanoseconds elapsed_time = boost::chrono::duration_cast<boost::chrono::nanoseconds>(end_time - start_time);
+                    p.offset_time = elapsed_time.count();
+
+                    pp_livox.points.push_back(p);
+
+                    cloud.points.emplace_back();
+                    cloud.points.back().x = point.X();
+                    cloud.points.back().y = point.Y();
+                    cloud.points.back().z = point.Z();
+
+                    count++;
+                }
             }
 
             if (scanPub && scanPub->HasConnections()) scanPub->Publish(laserMsg);
@@ -234,28 +274,32 @@ namespace gazebo
     {
         auto &rays = ray_shape->RayShapes();
         ignition::math::Vector3d start_point, end_point;
-        ignition::math::Quaterniond ray;
         auto offset = laserCollision->RelativePose();
-        int64_t end_index = currStartIndex + samplesStep;
         long unsigned int ray_index = 0;
         auto ray_size = rays.size();
         points_pair.reserve(rays.size());
-        for (int k = currStartIndex; k < end_index; k += downSample)
+
+        int64_t samplesPerPhase = samplesStep / numPhases;
+
+        for (int64_t phase = 0; phase < numPhases; phase++)
         {
-            auto index = k % maxPointSize;
-            auto &rotate_info = aviaInfos[index];
-            ray.Euler(ignition::math::Vector3d(0.0, rotate_info.zenith, rotate_info.azimuth));
-            auto axis = offset.Rot() * ray * ignition::math::Vector3d(1.0, 0.0, 0.0);
-            start_point = minDist * axis + offset.Pos();
-            end_point = maxDist * axis + offset.Pos();
-            if (ray_index < ray_size)
+            int64_t phaseEnd = phaseOffsets[phase] + samplesPerPhase;
+            for (int64_t k = phaseOffsets[phase]; k < phaseEnd; k += downSample)
             {
-                rays[ray_index]->SetPoints(start_point, end_point);
-                points_pair.emplace_back(ray_index, rotate_info);
+                auto index = k % maxPointSize;
+                auto &rotate_info = aviaInfos[index];
+                auto axis = offset.Rot() * rotate_info.direction;
+                start_point = minDist * axis + offset.Pos();
+                end_point = maxDist * axis + offset.Pos();
+                if (ray_index < ray_size)
+                {
+                    rays[ray_index]->SetPoints(start_point, end_point);
+                    points_pair.emplace_back(ray_index, rotate_info);
+                }
+                ray_index++;
             }
-            ray_index++;
+            phaseOffsets[phase] += samplesPerPhase;
         }
-        currStartIndex += samplesStep;
     }
 
     void LivoxPointsPlugin::InitializeScan(msgs::LaserScan *&scan)

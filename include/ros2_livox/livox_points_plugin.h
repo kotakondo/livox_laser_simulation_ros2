@@ -5,6 +5,8 @@
 #ifndef SRC_GAZEBO_LIVOX_POINTS_PLUGIN_H
 #define SRC_GAZEBO_LIVOX_POINTS_PLUGIN_H
 
+#include <deque>
+#include <vector>
 #include <gazebo/plugins/RayPlugin.hh>
 #include "livox_ode_multiray_shape.h"
 #include <gazebo_ros/node.hpp>
@@ -22,6 +24,7 @@ namespace gazebo
       double time;
       double azimuth;
       double zenith;
+      ignition::math::Vector3d direction;  // precomputed ray direction unit vector
    };
 
 
@@ -108,12 +111,16 @@ namespace gazebo
       std::string parent_name;
       std::string child_name;
       int64_t samplesStep = 0;
-      int64_t currStartIndex = 0;
       int64_t maxPointSize = 1000;
       int64_t downSample = 1;
+      int64_t numPhases = 1;
+      std::vector<int64_t> phaseOffsets;
 
       double maxDist = 10.0;
       double minDist = 0.1;
+
+      int64_t accumulateScans = 5;
+      std::deque<std::vector<std::pair<ignition::math::Vector3d, float>>> pointHistory;
 
       std::string ns_ = "default_frame";
    };
