@@ -22,13 +22,14 @@
     </inertial>
   </xacro:macro>
 
-  <xacro:macro name="mid360" params=" name:='' 
-                                      namespace:='quadrotor' 
-                                      parent:='base_link' 
-                                      topic:='mid360' 
-                                      *origin 
+  <xacro:macro name="mid360" params=" name:=''
+                                      namespace:='quadrotor'
+                                      parent:='base_link'
+                                      topic:='mid360'
+                                      *origin
                                       accel_fps:=250
                                       gyro_fps:=500
+                                      lidar_update_rate:=100
                                       ">
 
     <link name="${name}">
@@ -46,7 +47,7 @@
         <pose>0 0 0 0 0 0</pose>
         <always_on>true</always_on>
         <visualize>false</visualize>  <!-- Ensure no sensor visualization -->
-        <update_rate>100</update_rate>
+        <update_rate>${lidar_update_rate}</update_rate>
         <!-- This ray plugin is for sensor data -->
         <plugin name="${name}_plugin" filename="libros2_livox.so">
           <ray>
